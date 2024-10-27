@@ -1,0 +1,59 @@
+services:
+  wireguard:
+    image: linuxserver/wireguard
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Mendoza
+      - SERVERURL=
+      - SERVERPORT=51820
+      - PEERS=4 
+      - PEERDNS=auto 
+      - INTERNAL_SUBNET=10.13.13.0 
+    volumes:
+      - /root/wireguard:/config
+      - /lib/modules:/lib/modules
+      - /usr/src:/usr/src
+    ports:
+      - 51820:51820/udp
+    dns:
+      - 172.20.0.3
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    networks:
+      containers:
+        ipv4_address: 172.20.0.2
+    restart: unless-stopped
+
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
+      - "80:80/tcp"
+    environment:
+      TZ: 'America/Chicago'
+      # WEBPASSWORD: 'set a secure password here or it will be random'
+    # Volumes store your data between container upgrades
+    volumes:
+      - './etc-pihole:/etc/pihole'
+      - './etc-dnsmasq.d:/etc/dnsmasq.d'
+    #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+    cap_add:
+      - NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
+    networks:
+      containers:
+        ipv4_address: 172.20.0.3
+    restart: unless-stopped
+networks:
+  containers:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
